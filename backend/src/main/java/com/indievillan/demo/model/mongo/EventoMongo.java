@@ -8,6 +8,7 @@ import org.springframework.data.mongodb.core.index.GeoSpatialIndexType;
 import org.springframework.data.mongodb.core.index.GeoSpatialIndexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -18,6 +19,7 @@ public class EventoMongo {
     @Id
     private String id;
 
+    @NotBlank(message = "Informe o título do evento")
     private String titulo;
     private String descricao;
     private LocalDateTime dataCriacao = LocalDateTime.now();

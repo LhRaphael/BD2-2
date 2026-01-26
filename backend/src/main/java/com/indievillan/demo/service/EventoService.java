@@ -62,4 +62,18 @@ public class EventoService {
         
         return eventoRepositoryMongo.findByLocalizacaoNear(pontoUsuario, distancia);
     }
+
+    public Boolean excluirEvento(String id){
+        try{
+            eventoRepositoryMongo.deleteById(id);
+        }catch(Exception e){
+            throw e;
+        }
+        return true;
+    }
+
+    public Boolean exclirEventosUsuario(String userId){
+        eventoRepositoryMongo.deleteAllByUserId(userId).orElseThrow(()-> new SecurityException("Erro ao excluir todos os eventos"));
+        return true;
+    }
 }

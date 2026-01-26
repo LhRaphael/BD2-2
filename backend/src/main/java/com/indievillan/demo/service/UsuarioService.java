@@ -17,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 public class UsuarioService {
     private final UsuarioRepositoryGraph  usuarioRepositoryGraph;
     private final UsuarioRepositoryMongo usuarioRepositoryMongo;
+    private final EventoService eventoService;
 
     public UsuarioMongo cadastrarUsuarioMongo(CadastroDTO dto){
         UsuarioMongo usuario = new UsuarioMongo();
@@ -47,5 +48,17 @@ public class UsuarioService {
         }
 
         return usuario;
+    }
+
+    public Boolean excluirUsuarioMongo(String id){
+        try{
+            usuarioRepositoryGraph.deleteById(id);
+            usuarioRepositoryMongo.deleteById(id);
+            eventoService.exclirEventosUsuario(id);
+        }catch(Exception e){
+            throw e;
+        }
+
+        return true;
     }
 }

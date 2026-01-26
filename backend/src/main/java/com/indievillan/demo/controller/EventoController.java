@@ -3,7 +3,9 @@ package com.indievillan.demo.controller;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -35,7 +37,7 @@ public class EventoController {
         }
     }
 
-     @GetMapping("/eventos")
+    @GetMapping("/eventos")
     public ResponseEntity<?> listarEventosProximos(
             @RequestParam Double lat,
             @RequestParam Double lng,
@@ -48,6 +50,16 @@ public class EventoController {
             return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erro ao buscar eventos.");
+        }
+    }
+
+    @DeleteMapping("/evento/{id}")
+    public ResponseEntity<?> deletarEvento(@PathVariable String id){
+        try{
+            var evento = eventoService.excluirEvento(id);
+            return ResponseEntity.ok(evento);
+        }catch (Exception e){
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erro ao excluir evento.");
         }
     }
 }
