@@ -4,11 +4,12 @@ import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
 
 import com.indievillan.demo.dto.CadastroDTO;
+import com.indievillan.demo.dto.LoginDTO;
 import com.indievillan.demo.model.graph.UsuarioGraph;
 import com.indievillan.demo.model.mongo.UsuarioMongo;
 import com.indievillan.demo.repository.graph.UsuarioRepositoryGraph;
-import com.indievillan.demo.repository.mongo.EventoRepositoryMongo;
 import com.indievillan.demo.repository.mongo.UsuarioRepositoryMongo;
+
 
 import lombok.RequiredArgsConstructor;
 @Service
@@ -16,7 +17,6 @@ import lombok.RequiredArgsConstructor;
 public class UsuarioService {
     private final UsuarioRepositoryGraph  usuarioRepositoryGraph;
     private final UsuarioRepositoryMongo usuarioRepositoryMongo;
-    private final EventoRepositoryMongo eventoRepositoryMongo;
 
     public UsuarioMongo cadastrarUsuarioMongo(CadastroDTO dto){
         UsuarioMongo usuario = new UsuarioMongo();
@@ -37,5 +37,15 @@ public class UsuarioService {
 
         return salvo;
 
+    }
+
+    public UsuarioMongo autenticarUsuarioMongo(LoginDTO dto){
+        UsuarioMongo usuario = usuarioRepositoryMongo.findByEmail(dto.getEmail()).orElseThrow(()-> new SecurityException("Usuário não encontrado"));
+
+        if(!BCrypt.checkpw(dto.getSenha(), usuario.getSenhaHash())){
+            throw new SecurityException("Senha inválida");
+        }
+
+        return usuario;
     }
 }
