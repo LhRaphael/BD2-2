@@ -17,6 +17,7 @@ import lombok.NoArgsConstructor;
 public class EventoMongo {
     @Id
     private String id;
+
     private String titulo;
     private String descricao;
     private LocalDateTime dataCriacao = LocalDateTime.now();

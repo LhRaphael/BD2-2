@@ -9,6 +9,7 @@ import lombok.Data;
 public class UsuarioMongo {
     @Id
     private String id;
+
     private String nome;
     private String email;
     private String senhaHash; // Nunca salvar senha em texto puro!

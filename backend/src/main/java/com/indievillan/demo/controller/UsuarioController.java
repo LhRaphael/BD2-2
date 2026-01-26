@@ -12,6 +12,7 @@ import com.indievillan.demo.dto.CadastroDTO;
 import com.indievillan.demo.dto.LoginDTO;
 import com.indievillan.demo.service.UsuarioService;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -22,7 +23,7 @@ public class UsuarioController {
     private final UsuarioService usuarioService;
 
     @PostMapping("/cadastro")
-    public ResponseEntity<?> cadastrar(@RequestBody CadastroDTO dto){
+    public ResponseEntity<?> cadastrar(@Valid @RequestBody CadastroDTO dto){
         try{
             var usuario = usuarioService.cadastrarUsuarioMongo(dto);
             return ResponseEntity.status(HttpStatus.CREATED).body(usuario);
@@ -36,7 +37,7 @@ public class UsuarioController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginDTO dto) {
+    public ResponseEntity<?> login(@Valid @RequestBody LoginDTO dto) {
         try {
             var usuario = usuarioService.autenticarUsuarioMongo(dto);
             return ResponseEntity.ok(usuario);

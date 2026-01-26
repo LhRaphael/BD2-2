@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.indievillan.demo.dto.NovoEventoDTO;
 import com.indievillan.demo.service.EventoService;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -23,7 +24,7 @@ public class EventoController {
     private final EventoService eventoService;
 
     @PostMapping("/eventos")
-    public ResponseEntity<?> criarEvento(@RequestBody NovoEventoDTO dto) {
+    public ResponseEntity<?> criarEvento(@Valid @RequestBody NovoEventoDTO dto) {
         try {
             var evento = eventoService.criarEventoMongo(dto);
             return ResponseEntity.status(HttpStatus.CREATED).body(evento);

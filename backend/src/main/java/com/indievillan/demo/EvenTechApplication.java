@@ -10,4 +10,5 @@ public class EvenTechApplication {
 		SpringApplication.run(EvenTechApplication.class, args);
 	}
 
+
 }
