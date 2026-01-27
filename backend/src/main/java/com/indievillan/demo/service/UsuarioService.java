@@ -3,6 +3,7 @@ package com.indievillan.demo.service;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
 
+import com.indievillan.demo.dto.AtualizacaoDTO;
 import com.indievillan.demo.dto.CadastroDTO;
 import com.indievillan.demo.dto.LoginDTO;
 import com.indievillan.demo.model.graph.UsuarioGraph;
@@ -19,6 +20,7 @@ public class UsuarioService {
     private final UsuarioRepositoryMongo usuarioRepositoryMongo;
     private final EventoService eventoService;
 
+    //Create
     public UsuarioMongo cadastrarUsuarioMongo(CadastroDTO dto){
         UsuarioMongo usuario = new UsuarioMongo();
         usuario.setNome(dto.getNome());
@@ -40,6 +42,7 @@ public class UsuarioService {
 
     }
 
+    //Read
     public UsuarioMongo autenticarUsuarioMongo(LoginDTO dto){
         UsuarioMongo usuario = usuarioRepositoryMongo.findByEmail(dto.getEmail()).orElseThrow(()-> new SecurityException("Usuário não encontrado"));
 
@@ -50,6 +53,14 @@ public class UsuarioService {
         return usuario;
     }
 
+    //Update
+    public UsuarioMongo atualizarSenha(AtualizacaoDTO dto){
+        UsuarioMongo usuario = usuarioRepositoryMongo.findById(dto.getId()).orElseThrow(()-> new SecurityException("Usuário não encontrado"));
+        usuario.setSenhaHash(BCrypt.hashpw(dto.getSenha(), BCrypt.gensalt()));
+        return usuarioRepositoryMongo.save(usuario);
+    }
+
+    //Delete
     public Boolean excluirUsuarioMongo(String id){
         try{
             usuarioRepositoryGraph.deleteById(id);

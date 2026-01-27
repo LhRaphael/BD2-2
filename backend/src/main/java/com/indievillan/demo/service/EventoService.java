@@ -7,6 +7,7 @@ import org.springframework.data.geo.Metrics;
 import org.springframework.data.geo.Point;
 import org.springframework.stereotype.Service;
 
+import com.indievillan.demo.dto.AtlzEventoDTO;
 import com.indievillan.demo.dto.NovoEventoDTO;
 import com.indievillan.demo.model.mongo.EventoMongo;
 import com.indievillan.demo.model.mongo.UsuarioMongo;
@@ -24,7 +25,8 @@ public class EventoService {
     private final EventoRepositoryMongo eventoRepositoryMongo;
     private final UsuarioRepositoryGraph usuarioRepositoryGraph;
 
-     public EventoMongo criarEventoMongo(NovoEventoDTO dto){
+    //Create 
+    public EventoMongo criarEventoMongo(NovoEventoDTO dto){
         UsuarioMongo criador = usuarioRepositoryMongo.findById(dto.getCriadorId()).orElseThrow(()-> new SecurityException("Usuário não encontrado"));
 
         EventoMongo evento = new EventoMongo(
@@ -52,7 +54,8 @@ public class EventoService {
         return evento;
     }
 
-     public List<EventoMongo> buscarEventoMongos(Double lat, Double lng, Double raioKm){
+    //Read
+    public List<EventoMongo> buscarEventoMongos(Double lat, Double lng, Double raioKm){
         if (lat == null || lng == null) {
             throw new IllegalArgumentException("Latitude e Longitude são obrigatórias.");
         }
@@ -63,6 +66,15 @@ public class EventoService {
         return eventoRepositoryMongo.findByLocalizacaoNear(pontoUsuario, distancia);
     }
 
+    //Update
+    public EventoMongo atualizarEvento(AtlzEventoDTO dto){
+        EventoMongo evento = eventoRepositoryMongo.findById(dto.getId()).orElseThrow(()-> new SecurityException("Evento não encontrado"));
+        evento.setTitulo(dto.getTitulo());
+        evento.setDescricao(dto.getDescricao());
+        return eventoRepositoryMongo.save(evento);
+    }
+
+    //Delete
     public Boolean excluirEvento(String id){
         try{
             eventoRepositoryMongo.deleteById(id);
@@ -72,6 +84,7 @@ public class EventoService {
         return true;
     }
 
+    //Delete
     public Boolean exclirEventosUsuario(String userId){
         eventoRepositoryMongo.deleteAllByUserId(userId).orElseThrow(()-> new SecurityException("Erro ao excluir todos os eventos"));
         return true;

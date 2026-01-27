@@ -4,12 +4,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.indievillan.demo.dto.AtualizacaoDTO;
 import com.indievillan.demo.dto.CadastroDTO;
 import com.indievillan.demo.dto.LoginDTO;
 import com.indievillan.demo.service.UsuarioService;
@@ -47,6 +49,16 @@ public class UsuarioController {
             // O Service lança SecurityException para falha de autenticação
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
         } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erro ao processar login.");
+        }
+    }
+
+    @PatchMapping("/usuario/atualizar")
+    public ResponseEntity<?> update(@Valid @RequestBody AtualizacaoDTO dto){
+        try{
+            var usuario = usuarioService.atualizarSenha(dto);
+            return ResponseEntity.ok(usuario);
+        }catch(Exception e){
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erro ao processar login.");
         }
     }
