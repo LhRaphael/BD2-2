@@ -85,8 +85,8 @@ public class EventoService {
     }
 
     //Delete
-    public Boolean exclirEventosUsuario(String userId){
-        eventoRepositoryMongo.deleteAllByUserId(userId).orElseThrow(()-> new SecurityException("Erro ao excluir todos os eventos"));
+    public Boolean exclirEventosUsuario(String criadorId){
+        eventoRepositoryMongo.deleteAllByCriadorId(criadorId).orElseThrow(()-> new SecurityException("Erro ao excluir todos os eventos"));
         return true;
     }
 }

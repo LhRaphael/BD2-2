@@ -13,5 +13,5 @@ import org.springframework.data.geo.Point;;
 @Repository
 public interface EventoRepositoryMongo extends MongoRepository<EventoMongo, String>{
     List<EventoMongo> findByLocalizacaoNear(Point pontoUsuario, Distance distancia);
-    Optional<Boolean> deleteAllByUserId(String userId);
+    Optional<Boolean> deleteAllByCriadorId(String criadorId);
 }
