@@ -39,6 +39,36 @@ public class EventoController {
         }
     }
 
+    @PostMapping("/evento/{id}/participar")
+    public ResponseEntity<?> confirmarPresenca(@PathVariable String id, @RequestParam String usuarioId) {
+        try {
+            eventoService.confirmarPresenca(id, usuarioId);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erro ao confirmar presença.");
+        }
+    }
+
+    @GetMapping("/evento/{id}/participantes")
+    public ResponseEntity<?> listarParticipantes(@PathVariable String id) {
+        try {
+            var participantes = eventoService.listarParticipantes(id);
+            return ResponseEntity.ok(participantes);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erro ao buscar participantes.");
+        }
+    }
+
+    @GetMapping("/evento/{id}/verificar")
+    public ResponseEntity<?> verificarParticipacao(@PathVariable String id, @RequestParam String usuarioId) {
+        try {
+            Boolean participa = eventoService.verificarParticipacao(id, usuarioId);
+            return ResponseEntity.ok(participa);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erro ao verificar.");
+        }
+    }
+
     @GetMapping("/eventos")
     public ResponseEntity<?> listarEventosProximos(
             @RequestParam Double lat,
@@ -50,6 +80,19 @@ public class EventoController {
         } catch (IllegalArgumentException e) {
             // Retorna 400 se faltar lat ou lng
             return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erro ao buscar eventos.");
+        }
+    }
+
+    @GetMapping("/eventos/busca")
+    public ResponseEntity<?> buscarPorTitulo(
+            @RequestParam String titulo,
+            @RequestParam(required = false) Double lat,
+            @RequestParam(required = false) Double lng) {
+        try {
+            var eventos = eventoService.buscarPorTitulo(titulo, lat, lng);
+            return ResponseEntity.ok(eventos);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erro ao buscar eventos.");
         }
@@ -72,6 +115,16 @@ public class EventoController {
             return ResponseEntity.ok(evento);
         }catch (Exception e){
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erro ao excluir evento.");
+        }
+    }
+
+    @DeleteMapping("/evento/{id}/participar")
+    public ResponseEntity<?> removerPresenca(@PathVariable String id, @RequestParam String usuarioId) {
+        try {
+            eventoService.removerPresenca(id, usuarioId);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erro ao remover presença.");
         }
     }
 }
