@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext, useCallback } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import api from '../utils/api';
 import { AuthContext } from '../context/AuthContext';
 import { toast } from 'react-toastify';
@@ -12,50 +12,23 @@ import EventMap from '../components/EventMap';
 const HomePage = () => {
     const { user } = useContext(AuthContext);
     
+    // Estados de Dados
     const [events, setEvents] = useState([]);
-    const [userLocation, setUserLocation] = useState(null);
+    const [userLocation, setUserLocation] = useState(null); // [lat, lng]
     
-    // UI State
+    // Estados de UI
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [sidebarMode, setSidebarMode] = useState('view'); // 'view', 'create', 'edit', 'profile'
     const [selectedEvent, setSelectedEvent] = useState(null);
     const [tempLocation, setTempLocation] = useState(null);
     
+    // Formulário
     const [formData, setFormData] = useState({ titulo: '', descricao: '' });
     const [loading, setLoading] = useState(false);
 
-    const searchEvents = async (query) => {
-        if (!query.trim()) {
-            // Se a busca estiver vazia, volta a mostrar os eventos próximos (padrão)
-            if (userLocation) fetchEvents(userLocation[0], userLocation[1]);
-            return;
-        }
+    // --- 1. BUSCA E LISTAGEM (READ) ---
 
-        try {
-            // Monta a URL com lat/lng para que o backend possa ordenar por distância
-            let url = `/eventos/busca?titulo=${query}`;
-            if (userLocation) {
-                url += `&lat=${userLocation[0]}&lng=${userLocation[1]}`;
-            }
-
-            const res = await api.get(url);
-            setEvents(res.data);
-        } catch (error) {
-            console.error("Erro na busca", error);
-        }
-    };
-
-    // Implementação de DEBOUNCE manual para não sobrecarregar a API
-    const handleSearch = (query) => {
-        // Limpa o timeout anterior
-        if (window.searchTimeout) clearTimeout(window.searchTimeout);
-        
-        // Define um novo timeout de 500ms
-        window.searchTimeout = setTimeout(() => {
-            searchEvents(query);
-        }, 500);
-    };
-
+    // Carrega localização inicial e eventos
     useEffect(() => {
         navigator.geolocation.getCurrentPosition(
             (position) => {
@@ -64,53 +37,96 @@ const HomePage = () => {
                 fetchEvents(latitude, longitude);
             },
             () => {
+                // Fallback: Centro de Sousa-PB
                 const fallback = [-6.75, -38.23];
                 setUserLocation(fallback);
                 fetchEvents(fallback[0], fallback[1]);
+                toast.warning("Localização não obtida. Usando padrão.");
             }
         );
     }, []);
 
+    // Endpoint: GET /api/eventos?lat=...&lng=...&raioKm=...
     const fetchEvents = async (lat, lng) => {
         try {
-            const res = await api.get(`/eventos?lat=${lat}&lng=${lng}&raioKm=50`);
+            const res = await api.get('/eventos', {
+                params: {
+                    lat: lat,
+                    lng: lng,
+                    raioKm: 50
+                }
+            });
             setEvents(res.data);
-        } catch (error) { console.error("Erro ao buscar eventos"); }
+        } catch (error) {
+            console.error("Erro ao buscar eventos", error);
+        }
     };
 
-    // --- HANDLERS DA SIDEBAR ---
+    // Endpoint: GET /api/eventos/busca?titulo=...
+    const searchEvents = async (query) => {
+        if (!query.trim()) {
+            if (userLocation) fetchEvents(userLocation[0], userLocation[1]);
+            return;
+        }
 
+        try {
+            const params = { titulo: query };
+            // Se tivermos localização, enviamos para ordenar por distância
+            if (userLocation) {
+                params.lat = userLocation[0];
+                params.lng = userLocation[1];
+            }
+
+            const res = await api.get('/eventos/busca', { params });
+            setEvents(res.data);
+        } catch (error) {
+            console.error("Erro na busca", error);
+        }
+    };
+
+    // Debounce para a busca (evita muitas requisições)
+    const handleSearch = (query) => {
+        if (window.searchTimeout) clearTimeout(window.searchTimeout);
+        window.searchTimeout = setTimeout(() => {
+            searchEvents(query);
+        }, 500);
+    };
+
+    // --- 2. CRIAÇÃO (CREATE) ---
+
+    // Endpoint: POST /api/eventos (Body: NovoEventoDTO)
     const handleCreateEvent = async (e) => {
         e.preventDefault();
+        
+        if (!tempLocation) return toast.warning("Selecione um local no mapa.");
+
         setLoading(true);
         try {
-            await api.post('/eventos', {
-                ...formData,
+            const payload = {
+                titulo: formData.titulo,
+                descricao: formData.descricao,
                 criadorId: user.id,
+                // Backend espera 'latitude' e 'longitude', Leaflet dá 'lat' e 'lng'
                 latitude: tempLocation.lat,
                 longitude: tempLocation.lng
-            });
-            toast.success("Evento criado!");
+            };
+
+            await api.post('/eventos', payload);
+            
+            toast.success("Evento criado com sucesso!");
             setIsSidebarOpen(false);
             setTempLocation(null);
-            fetchEvents(userLocation[0], userLocation[1]);
-        } catch (error) { toast.error("Erro ao criar evento."); } 
-        finally { setLoading(false); }
+            // Atualiza o mapa
+            if (userLocation) fetchEvents(userLocation[0], userLocation[1]);
+        } catch (error) {
+            toast.error(error.response?.data || "Erro ao criar evento.");
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const handleDeleteEvent = async (id) => {
-        if (!window.confirm("Tem certeza que deseja excluir este evento?")) return;
-        try {
-            await api.delete(`/evento/${id}`);
-            toast.success("Evento excluído.");
-            setIsSidebarOpen(false);
-            fetchEvents(userLocation[0], userLocation[1]); // Atualiza lista
-        } catch (error) { toast.error("Erro ao excluir evento."); }
-    };
+    // --- 3. ATUALIZAÇÃO (UPDATE) ---
 
-    // --- NOVA LÓGICA DE EDIÇÃO ---
-
-    // 1. Iniciar Edição: Preenche o form e muda o modo
     const handleEditStart = (isStarting = true) => {
         if (isStarting) {
             setFormData({
@@ -119,36 +135,49 @@ const HomePage = () => {
             });
             setSidebarMode('edit');
         } else {
-            // Cancelar edição: volta para visualização
             setSidebarMode('view');
         }
     };
 
-    // 2. Salvar Edição: Chama o backend
+    // Endpoint: PATCH /api/evento/atualizar (Body: AtlzEventoDTO)
     const handleUpdateEvent = async (e) => {
         e.preventDefault();
         setLoading(true);
         try {
             const payload = {
-                id: selectedEvent.id,
+                id: selectedEvent.id, // ID Obrigatório no DTO
                 titulo: formData.titulo,
                 descricao: formData.descricao
             };
             
-            // Chama endpoint @PatchMapping("/evento/atualizar")
             const response = await api.patch('/evento/atualizar', payload);
             
             toast.success("Evento atualizado!");
-            
-            // Atualiza os dados locais para refletir na UI imediatamente
-            setSelectedEvent(response.data);
-            setSidebarMode('view'); // Volta para visualização com dados novos
-            fetchEvents(userLocation[0], userLocation[1]); // Atualiza mapa
+            setSelectedEvent(response.data); // Atualiza UI com dados novos
+            setSidebarMode('view');
+            if (userLocation) fetchEvents(userLocation[0], userLocation[1]);
             
         } catch (error) {
             toast.error("Erro ao atualizar evento.");
         } finally {
             setLoading(false);
+        }
+    };
+
+    // --- 4. EXCLUSÃO (DELETE) ---
+
+    // Endpoint: DELETE /api/evento/{id}
+    const handleDeleteEvent = async (id) => {
+        if (!window.confirm("Tem certeza que deseja excluir este evento?")) return;
+        
+        try {
+            await api.delete(`/evento/${id}`);
+            toast.success("Evento excluído.");
+            setIsSidebarOpen(false);
+            // Remove da lista localmente para não precisar recarregar tudo
+            setEvents(prev => prev.filter(e => e.id !== id));
+        } catch (error) {
+            toast.error("Erro ao excluir evento.");
         }
     };
 
@@ -166,10 +195,14 @@ const HomePage = () => {
             await api.patch('/usuario/atualizar', { id: user.id, senha: novaSenha });
             toast.success("Senha atualizada!");
             setIsSidebarOpen(false);
-        } catch (error) { toast.error("Erro ao atualizar senha."); } 
-        finally { setLoading(false); }
+        } catch (error) {
+            toast.error("Erro ao atualizar senha.");
+        } finally {
+            setLoading(false);
+        }
     };
 
+    // Interações com o Mapa
     const handleMapClick = (latlng) => {
         setTempLocation(latlng);
         setSidebarMode('create');
@@ -182,8 +215,6 @@ const HomePage = () => {
         setSidebarMode('view');
         setIsSidebarOpen(true);
     };
-
-    
 
     return (
         <div className="app-container">
@@ -220,11 +251,11 @@ const HomePage = () => {
                     formData={formData}
                     setFormData={setFormData}
                     
-                    // Ações
+                    // Ações passadas como props
                     onSubmitEvent={handleCreateEvent}
-                    onUpdateEvent={handleUpdateEvent} // <--- Passando a nova função
+                    onUpdateEvent={handleUpdateEvent}
                     onDeleteEvent={handleDeleteEvent}
-                    onEditStart={handleEditStart}     // <--- Passando a nova função
+                    onEditStart={handleEditStart}
                     onUpdatePassword={handleUpdatePassword}
                     
                     loading={loading}
