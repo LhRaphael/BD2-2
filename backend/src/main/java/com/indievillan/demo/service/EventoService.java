@@ -28,8 +28,15 @@ public class EventoService {
     private final UsuarioRepositoryGraph usuarioRepositoryGraph;
 
     //Create 
-    public EventoMongo criarEventoMongo(NovoEventoDTO dto){
-        UsuarioMongo criador = usuarioRepositoryMongo.findById(dto.getCriadorId()).orElseThrow(()-> new SecurityException("Usuário não encontrado"));
+   public EventoMongo criarEventoMongo(NovoEventoDTO dto){
+        // 1. Validação de Segurança: O usuário existe?
+        UsuarioMongo criador = usuarioRepositoryMongo.findById(dto.getCriadorId())
+            .orElseThrow(()-> new SecurityException("Usuário não encontrado. Faça login novamente."));
+
+        // 2. Validação de Dados: Coordenadas existem?
+        if (dto.getLatitude() == null || dto.getLongitude() == null) {
+            throw new IllegalArgumentException("Coordenadas inválidas. Selecione um local no mapa.");
+        }
 
         EventoMongo evento = new EventoMongo(
             dto.getTitulo(),
@@ -53,9 +60,9 @@ public class EventoService {
             System.err.println("Erro crítico: Falha ao criar relacionamento no grafo. " + e.getMessage());
         }
 
-        return evento;
+        return eventoSalvo;
     }
-
+    
     public void confirmarPresenca(String eventoId, String usuarioId) {
         // 1. Busca os dados reais no Mongo para garantir consistência
         UsuarioMongo usuario = usuarioRepositoryMongo.findById(usuarioId)

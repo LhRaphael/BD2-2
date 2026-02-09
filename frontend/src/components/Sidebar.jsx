@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { X, MapPin, User, Calendar, CheckCircle, Trash2, Lock, ShieldCheck, Edit, Users } from 'lucide-react';
 import ReCAPTCHA from "react-google-recaptcha";
 import { AuthContext } from '../context/AuthContext';
-import api from '../utils/api'; // Importar API
+import api from '../utils/api';
 import { toast } from 'react-toastify';
 
 const Sidebar = ({ 
@@ -14,18 +14,17 @@ const Sidebar = ({
 }) => {
     const { user } = useContext(AuthContext);
     
-    // Estados locais para Participação
+    // Estados locais
     const [participantes, setParticipantes] = useState([]);
     const [jaConfirmou, setJaConfirmou] = useState(false);
     const [loadingParticipantes, setLoadingParticipantes] = useState(false);
 
-    // Estados para Senha/Captcha (mantidos)
+    // Estados senha
     const [captchaValido, setCaptchaValido] = useState(false);
     const [passData, setPassData] = useState({ novaSenha: '', confirmacao: '' });
 
     const isCreator = (mode === 'view' || mode === 'edit') && eventData && user?.id === eventData.criadorId;
 
-    // Efeito para carregar participantes quando abrir um evento
     useEffect(() => {
         if (mode === 'view' && eventData && isOpen) {
             fetchParticipantes();
@@ -33,35 +32,50 @@ const Sidebar = ({
         }
     }, [mode, eventData, isOpen]);
 
+    // Endpoint: GET /api/evento/{id}/participantes
     const fetchParticipantes = async () => {
         try {
             const res = await api.get(`/evento/${eventData.id}/participantes`);
             setParticipantes(res.data);
-        } catch (error) { console.error("Erro ao buscar participantes"); }
+        } catch (error) {
+            console.error("Erro ao buscar participantes");
+        }
     };
 
+    // Endpoint: GET /api/evento/{id}/verificar?usuarioId=...
     const checkStatusParticipacao = async () => {
+        if (!user) return;
         try {
-            const res = await api.get(`/evento/${eventData.id}/verificar?usuarioId=${user.id}`);
+            const res = await api.get(`/evento/${eventData.id}/verificar`, {
+                params: { usuarioId: user.id }
+            });
             setJaConfirmou(res.data);
-        } catch (error) { console.error("Erro ao verificar status"); }
+        } catch (error) {
+            console.error("Erro ao verificar status");
+        }
     };
 
+    // Toggle Presença (Confirmar/Remover)
     const handleTogglePresenca = async () => {
         setLoadingParticipantes(true);
         try {
             if (jaConfirmou) {
-                // Remover
-                await api.delete(`/evento/${eventData.id}/participar?usuarioId=${user.id}`);
+                // Endpoint: DELETE /api/evento/{id}/participar?usuarioId=...
+                await api.delete(`/evento/${eventData.id}/participar`, {
+                    params: { usuarioId: user.id }
+                });
                 toast.info("Presença cancelada.");
                 setJaConfirmou(false);
             } else {
-                // Confirmar
-                await api.post(`/evento/${eventData.id}/participar?usuarioId=${user.id}`);
+                // Endpoint: POST /api/evento/{id}/participar?usuarioId=...
+                // Nota: POST espera (url, body, config). Body é null aqui.
+                await api.post(`/evento/${eventData.id}/participar`, null, {
+                    params: { usuarioId: user.id }
+                });
                 toast.success("Presença confirmada! Nos vemos lá.");
                 setJaConfirmou(true);
             }
-            // Atualiza lista
+            // Recarrega a lista
             fetchParticipantes();
         } catch (error) {
             toast.error("Erro ao atualizar presença.");
@@ -70,16 +84,28 @@ const Sidebar = ({
         }
     };
 
-    // ... (restante dos handlers de form e senha iguais) ...
+    const handleFormSubmit = (e) => {
+        if (mode === 'edit') {
+            onUpdateEvent(e);
+        } else {
+            onSubmitEvent(e);
+        }
+    };
+
     const handleCaptchaChange = (value) => setCaptchaValido(!!value);
-    const handlePasswordSubmit = (e) => { /*...*/ };
-    const handleFormSubmit = (e) => { /*...*/ };
+
+    const handlePasswordSubmit = (e) => {
+        e.preventDefault();
+        if(passData.novaSenha !== passData.confirmacao) return alert("As senhas não conferem!");
+        onUpdatePassword(passData.novaSenha);
+        setPassData({ novaSenha: '', confirmacao: '' });
+        setCaptchaValido(false);
+    };
 
     return (
         <div className={`sidebar ${isOpen ? 'open' : ''}`}>
             <div className="sidebar-header">
-                {/* ... Header igual ao anterior ... */}
-                 <h2 style={{ margin: 0, fontSize: '1.25rem', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <h2 style={{ margin: 0, fontSize: '1.25rem', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '10px' }}>
                     {mode === 'create' && 'Novo Evento'}
                     {mode === 'edit' && 'Editar Evento'}
                     {mode === 'view' && 'Detalhes do Evento'}
@@ -136,7 +162,7 @@ const Sidebar = ({
                                     participantes.map((p, index) => (
                                         <div key={index} title={p.nome} style={{
                                             width: '32px', height: '32px', borderRadius: '50%',
-                                            background: `hsl(${Math.random() * 360}, 70%, 80%)`, // Cor aleatória
+                                            background: `hsl(${Math.random() * 360}, 70%, 80%)`,
                                             color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
                                             fontSize: '0.8rem', fontWeight: 'bold', border: '2px solid white', boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                                         }}>
@@ -148,7 +174,6 @@ const Sidebar = ({
                         </div>
 
                         <div className="action-buttons" style={{ flexDirection: 'column', marginTop: '24px' }}>
-                            {/* Botão de Toggle Presença */}
                             <button 
                                 onClick={handleTogglePresenca}
                                 disabled={loadingParticipantes}
@@ -164,7 +189,6 @@ const Sidebar = ({
                                 )}
                             </button>
 
-                            {/* Área do Criador */}
                             {isCreator && (
                                 <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
                                     <button onClick={onEditStart} className="btn-secondary" style={{ flex: 1, display: 'flex', justifyContent: 'center', gap: '8px', color: 'var(--primary)', borderColor: 'var(--primary)' }}>
@@ -179,49 +203,104 @@ const Sidebar = ({
                     </div>
                 )}
 
-                {/* ... (Modos CREATE, EDIT e PROFILE mantidos iguais ao anterior) ... */}
+                {/* --- MODO CRIAÇÃO / EDIÇÃO --- */}
                 {(mode === 'create' || mode === 'edit') && (
                     <form onSubmit={handleFormSubmit}>
-                         {/* ... form content ... */}
-                         <div style={{ background: '#eff6ff', border: '1px solid #dbeafe', padding: '12px', borderRadius: '8px', color: '#1d4ed8', marginBottom: '20px', fontSize: '0.875rem', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <div style={{ background: '#eff6ff', border: '1px solid #dbeafe', padding: '12px', borderRadius: '8px', color: '#1d4ed8', marginBottom: '20px', fontSize: '0.875rem', display: 'flex', gap: '8px', alignItems: 'center' }}>
                             <MapPin size={16} /> 
                             {mode === 'edit' ? 'Localização fixa' : 'Local selecionado no mapa.'}
                         </div>
-                         {/* ... inputs titulo/descricao ... */}
-                         <div className="form-group">
+
+                        <div className="form-group">
                             <label className="form-label">Nome do Evento</label>
-                            <input className="form-input" placeholder="Ex: Workshop de Node.js" value={formData.titulo} onChange={e => setFormData({...formData, titulo: e.target.value})} required />
+                            <input 
+                                className="form-input" 
+                                placeholder="Ex: Workshop de Node.js"
+                                value={formData.titulo}
+                                onChange={e => setFormData({...formData, titulo: e.target.value})}
+                                required
+                            />
                         </div>
                         <div className="form-group">
                             <label className="form-label">Descrição</label>
-                            <textarea className="form-textarea" rows="4" placeholder="Detalhes do evento..." value={formData.descricao} onChange={e => setFormData({...formData, descricao: e.target.value})} />
+                            <textarea 
+                                className="form-textarea" 
+                                rows="4" 
+                                placeholder="Detalhes do evento..."
+                                value={formData.descricao}
+                                onChange={e => setFormData({...formData, descricao: e.target.value})}
+                            />
                         </div>
-                         {/* ... buttons ... */}
-                         <div className="action-buttons">
-                            {mode === 'edit' && <button type="button" onClick={() => onEditStart(false)} className="btn-secondary" style={{ flex: 1 }}>Cancelar</button>}
-                            <button type="submit" className="btn-primary" style={{ flex: 1 }} disabled={loading}>{loading ? 'Salvando...' : 'Salvar'}</button>
+                        
+                        <div className="action-buttons">
+                            {mode === 'edit' && (
+                                <button type="button" onClick={() => onEditStart(false)} className="btn-secondary" style={{ flex: 1 }}>
+                                    Cancelar
+                                </button>
+                            )}
+                            <button type="submit" className="btn-primary" style={{ flex: 1 }} disabled={loading}>
+                                {loading ? 'Salvando...' : (mode === 'edit' ? 'Salvar Alterações' : 'Criar Evento')}
+                            </button>
                         </div>
                     </form>
                 )}
 
+                {/* --- MODO PERFIL --- */}
                 {mode === 'profile' && (
                     <div className="animate-fade-in">
-                        {/* ... profile content ... */}
                         <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '24px' }}>
-                            <h4 style={{ margin: '0 0 12px 0', display: 'flex', alignItems: 'center', gap: '8px' }}><ShieldCheck size={18} color="var(--primary)"/> Segurança</h4>
-                            <p style={{ fontSize: '0.9rem', color: '#64748b' }}>Para atualizar sua senha, confirme que você não é um robô.</p>
+                            <h4 style={{ margin: '0 0 12px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <ShieldCheck size={18} color="var(--primary)"/> Segurança
+                            </h4>
+                            <p style={{ fontSize: '0.9rem', color: '#64748b' }}>
+                                Para atualizar sua senha, confirme que você não é um robô.
+                            </p>
                         </div>
                         <form onSubmit={handlePasswordSubmit}>
                             <div className="form-group">
                                 <label className="form-label">Nova Senha</label>
-                                <div style={{ position: 'relative' }}><Lock size={16} style={{ position: 'absolute', left: '10px', top: '12px', color: '#94a3b8' }}/><input type="password" className="form-input" style={{ paddingLeft: '35px' }} placeholder="No mínimo 8 caracteres" value={passData.novaSenha} onChange={e => setPassData({...passData, novaSenha: e.target.value})} required /></div>
+                                <div style={{ position: 'relative' }}>
+                                    <Lock size={16} style={{ position: 'absolute', left: '10px', top: '12px', color: '#94a3b8' }}/>
+                                    <input 
+                                        type="password"
+                                        className="form-input" 
+                                        style={{ paddingLeft: '35px' }}
+                                        placeholder="No mínimo 8 caracteres"
+                                        value={passData.novaSenha}
+                                        onChange={e => setPassData({...passData, novaSenha: e.target.value})}
+                                        required
+                                    />
+                                </div>
                             </div>
                             <div className="form-group">
                                 <label className="form-label">Confirmar Senha</label>
-                                <div style={{ position: 'relative' }}><Lock size={16} style={{ position: 'absolute', left: '10px', top: '12px', color: '#94a3b8' }}/><input type="password" className="form-input" style={{ paddingLeft: '35px' }} placeholder="Repita a senha" value={passData.confirmacao} onChange={e => setPassData({...passData, confirmacao: e.target.value})} required /></div>
+                                <div style={{ position: 'relative' }}>
+                                    <Lock size={16} style={{ position: 'absolute', left: '10px', top: '12px', color: '#94a3b8' }}/>
+                                    <input 
+                                        type="password"
+                                        className="form-input" 
+                                        style={{ paddingLeft: '35px' }}
+                                        placeholder="Repita a senha"
+                                        value={passData.confirmacao}
+                                        onChange={e => setPassData({...passData, confirmacao: e.target.value})}
+                                        required
+                                    />
+                                </div>
                             </div>
-                            <div style={{ margin: '20px 0', display: 'flex', justifyContent: 'center' }}><ReCAPTCHA sitekey="6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI" onChange={handleCaptchaChange} /></div>
-                            <button type="submit" className="btn-primary" disabled={!captchaValido || loading} style={{ opacity: captchaValido ? 1 : 0.6 }}>{loading ? 'Atualizando...' : 'Atualizar Senha'}</button>
+                            <div style={{ margin: '20px 0', display: 'flex', justifyContent: 'center' }}>
+                                <ReCAPTCHA
+                                    sitekey="6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"
+                                    onChange={handleCaptchaChange}
+                                />
+                            </div>
+                            <button 
+                                type="submit" 
+                                className="btn-primary" 
+                                disabled={!captchaValido || loading}
+                                style={{ opacity: captchaValido ? 1 : 0.6 }}
+                            >
+                                {loading ? 'Atualizando...' : 'Atualizar Senha'}
+                            </button>
                         </form>
                     </div>
                 )}
