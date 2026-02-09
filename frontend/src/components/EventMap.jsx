@@ -56,7 +56,7 @@ const EventMap = ({ events = [], center, onMapClick, onEventClick, tempLocation 
             {events.map((evt) => {
                 const position = getPosition(evt.localizacao);
                 
-                // IMPORTANTE: Se a posição for inválida, simplesmente não renderiza este marcador
+                // se a posição for inválida, simplesmente não renderiza este marcador
                 // em vez de quebrar a página toda.
                 if (!position) return null;
 
